@@ -1,0 +1,64 @@
+# This is a TOML document.
+
+title = "TOML Example"
+
+[client]
+    name = "client name"
+
+## rabbit HA-mode queue config
+[[input.rabbitmq]]
+    url = "xxx.xxx.xxx.xxx"
+    port = 69
+    vhost = "vhost"
+    queue_name = "queue_name"
+    username = "username"
+    password  = "password"
+
+[[input.rabbitmq]]
+    url = "yyy.yyy.yyy.yyy"
+    port = 69
+    vhost = "vhost"
+    queue_name = "queue_name"
+    username = "username"
+    password  = "password"
+
+
+
+#[[output.rabbitmq]]
+#    url = "yyy.yyy.yyy.yyy"
+#    port = 69
+#    vhost = "/"
+#    queue_name = "queue_name"
+#    username = "username"
+#    password  = "password"
+
+
+[output.influxdb]
+  url = "influx.db"
+  port = "69"
+  database = "dbname"
+
+  ## Retention policy to write to. Empty string writes to the default rp.
+  retention_policy = ""
+  ## Write consistency (clusters only), can be: "any", "one", "quorum", "all"
+  write_consistency = "any"
+
+  ## Write timeout (for the InfluxDB client), formatted as a string.
+  ## If not provided, will default to 5s. 0s means no timeout (not recommended).
+  timeout = "5s"
+  username = "username"
+  password = "password"
+  ## Set the user agent for HTTP POSTs (can be useful for log differentiation)
+  # user_agent = "telegraf"
+  ## Set UDP payload size, defaults to InfluxDB UDP Client default (512 bytes)
+  # udp_payload = 512
+
+  precision = "s"
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
+
