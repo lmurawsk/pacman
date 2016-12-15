@@ -32,7 +32,7 @@ def send_to_rabbit(body):
 
     connection = connect_to_rabbit_node(connectionParams)
     channel = connection.channel()
-    channel.basic_publish(exchange='',routing_key=TO_RABBITMQ1_QUEUE,body=body,properties=pika.BasicProperties(delivery_mode = 2))
+    channel.basic_publish(exchange='',routing_key=CONF['output']['rabbitmq'][0]['queue_name'],body=body,properties=pika.BasicProperties(delivery_mode = 2))
     print (" [x] Sent to Rabbit %r" % body)
     connection.close()
 
