@@ -9,6 +9,7 @@ RUN apt-get update && \
     python-pip \
     vim \
     telnet && \
+    apt-get -y install freetds-dev && \
     apt-get update --fix-missing
 
 #   Add Tini - tini 'init' for containers
