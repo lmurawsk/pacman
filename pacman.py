@@ -8,6 +8,7 @@ import toml
 import json
 from datetime import datetime
 import pymssql
+import pandas.io.sql as psql
 
 CONF_FILE = '/conf/conf.toml'
 
@@ -25,7 +26,7 @@ def transform_func(body):
         
         body = json.loads(body)    
 
-        mssql_conn = pymssql.connect(host=CONF['transform']['mssql']['url'], user=CONF['transform']['mssql']['user'], password=CONF['transform']['mssql']['password'], database=CONF['transform']['mssql']['database'], as_dict=True, charset='utf8')
+        mssql_conn = pymssql.connect(host=CONF['transform']['mssql'][0]['url'], user=CONF['transform']['mssql'][0]['user'], password=CONF['transform']['mssql'][0]['password'], database=CONF['transform']['mssql'][0]['database'], as_dict=True, charset='utf8')
         sql = """SELECT IP_ADDRESS,ADDRESS, SITE4G_NAME, ZONE, GEOHASH AS geohash FROM objects"""
         config_data = psql.read_sql(sql, mssql_conn, index_col='IP_ADDRESS')
         config_data_dict = config_data.T.to_dict()
