@@ -22,7 +22,11 @@ title = "TOML Example"
     username = "username"
     password  = "password"
 
-
+[transform.mssql]
+    url = "zzz.zzz.zzz.zzz"
+    database = "database"
+    username = "username"
+    password = "password"
 
 #[[output.rabbitmq]]
 #    url = "yyy.yyy.yyy.yyy"

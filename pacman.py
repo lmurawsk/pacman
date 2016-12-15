@@ -18,27 +18,28 @@ def read_conf(CONF_FILE):
     return conf
 
 def transform_func(body):
+    # before forwarding data, perform operations on fetched data, before forwarding them further
+
     global CONF
-
-    # custom operations on fetched data, before forwarding them further
     
-    if 'mssql' in CONF['transform'].viewkeys():
-        
-        body = json.loads(body)    
+    if 'transform' in CONF.viewkeys():
+        if 'mssql' in CONF['transform'].viewkeys(): 
+            body = json.loads(body)    
 
-        mssql_conn = pymssql.connect(host=CONF['transform']['mssql'][0]['url'], user=CONF['transform']['mssql'][0]['user'], password=CONF['transform']['mssql'][0]['password'], database=CONF['transform']['mssql'][0]['database'], as_dict=True, charset='utf8')
-        sql = """SELECT IP_ADDRESS,ADDRESS, SITE4G_NAME, ZONE, GEOHASH AS geohash FROM objects"""
-        config_data = psql.read_sql(sql, mssql_conn, index_col='IP_ADDRESS')
-        config_data_dict = config_data.T.to_dict()
-        for object_x in body:
-            try:
-                # print 'try to add tags..'
-                object_x['tags'].update(config_data_dict[object_x['tags']['host']])
-            except:
-                # print '....except'
-                object_x['tags'].update({'ADDRESS': 'Null','SITE4G_NAME': 'Null', 'ZONE': 0,'geohash': 'Null'})
-
-        body = json.dumps(body)
+            MSSQL_CFG = CONF['transform']['mssql']
+            mssql_conn = pymssql.connect(host=MSSQL_CFG['url'], user=MSSQL_CFG['username'], password=MSSQL_CFG['password'], database=MSSQL_CFG['database'], as_dict=True, charset='utf8')
+            sql = """SELECT IP_ADDRESS,ADDRESS, SITE4G_NAME, ZONE, GEOHASH AS geohash FROM objects"""
+            config_data = psql.read_sql(sql, mssql_conn, index_col='IP_ADDRESS')
+            config_data_dict = config_data.T.to_dict()
+            for object_x in body:
+                try:
+                    # print 'try to add tags..'
+                    object_x['tags'].update(config_data_dict[object_x['tags']['host']])
+                except:
+                    # print '....except'
+                    object_x['tags'].update({'ADDRESS': 'Null','SITE4G_NAME': 'Null', 'ZONE': 0,'geohash': 'Null'})
+    
+            body = json.dumps(body)
 
     return body
 
@@ -65,10 +66,10 @@ def send_to_rabbit(body):
 
 def send_to_influx(body):
 
-    ## podlaczenie do InfluxDB
     global CONF
     print ('Infludb output conn params', CONF['output']['influxdb'])
-    client = InfluxDBClient(CONF['output']['influxdb']['url'], CONF['output']['influxdb']['port'], CONF['output']['influxdb']['username'], CONF['output']['influxdb']['password'], CONF['output']['influxdb']['database'])
+    INFLUX_CFG = CONF['output']['influxdb']
+    client = InfluxDBClient(INFLUX_CFG['url'], INFLUX_CFG['port'], INFLUX_CFG['username'], INFLUX_CFG['password'], INFLUX_CFG['database'])
     #client.create_database('ping')
 
     body = json.loads(body)
