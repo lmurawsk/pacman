@@ -7,6 +7,7 @@ import time
 import toml
 import json
 from datetime import datetime
+import pymssql
 
 CONF_FILE = '/conf/conf.toml'
 
@@ -14,6 +15,31 @@ def read_conf(CONF_FILE):
     with open(CONF_FILE) as conffile:
         conf = toml.loads(conffile.read())
     return conf
+
+def transform_func(body):
+    global CONF
+
+    # custom operations on fetched data, before forwarding them further
+    
+    if 'mssql' in CONF['transform'].viewkeys():
+        
+        body = json.loads(body)    
+
+        mssql_conn = pymssql.connect(host=CONF['transform']['mssql']['url'], user=CONF['transform']['mssql']['user'], password=CONF['transform']['mssql']['password'], database=CONF['transform']['mssql']['database'], as_dict=True, charset='utf8')
+        sql = """SELECT IP_ADDRESS,ADDRESS, SITE4G_NAME, ZONE, GEOHASH AS geohash FROM objects"""
+        config_data = psql.read_sql(sql, mssql_conn, index_col='IP_ADDRESS')
+        config_data_dict = config_data.T.to_dict()
+        for object_x in body:
+            try:
+                # print 'try to add tags..'
+                object_x['tags'].update(config_data_dict[object_x['tags']['host']])
+            except:
+                # print '....except'
+                object_x['tags'].update({'ADDRESS': 'Null','SITE4G_NAME': 'Null', 'ZONE': 0,'geohash': 'Null'})
+
+        body = json.dumps(body)
+
+    return body
 
 def send_to_rabbit(body):
 
@@ -28,7 +54,7 @@ def send_to_rabbit(body):
                                          ,credentials)
         connectionParams.append(connection_x)
 
-		
+
 
     connection = connect_to_rabbit_node(connectionParams)
     channel = connection.channel()
@@ -50,10 +76,11 @@ def send_to_influx(body):
     res = client.write_points(body, time_precision='s')
 
 
-
 # metoda nasluchuje na odbir danych po otrzymaniu wysyla do bazy MongoDB
 def callback(ch, method, properties, body):
     print(" [x] Received %r" % body)
+
+    body = transform_func(body)
 
     global CONF
     if 'influxdb' in CONF['output'].viewkeys():
