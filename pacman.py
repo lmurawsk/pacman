@@ -12,6 +12,11 @@ import pandas.io.sql as psql
 
 CONF_FILE = '/conf/conf.toml'
 
+## MS_SQL QUERY CONFIG
+NODEBs_CONF = ''
+NODEB_CONF_READ_INTERVAL_h = 24
+NODEB_CONF_READ_TIMESTAMP = 0
+
 def read_conf(CONF_FILE):
     with open(CONF_FILE) as conffile:
         conf = toml.loads(conffile.read())
@@ -21,20 +26,28 @@ def transform_func(body):
     # before forwarding data, perform operations on fetched data, before forwarding them further
 
     global CONF
-    
+    global NODEBs_CONF
+    global NODEB_CONF_READ_TIMESTAMP
+
     if 'transform' in CONF.viewkeys():
         if 'mssql' in CONF['transform'].viewkeys(): 
             body = json.loads(body)    
+            
+            ## query MSSQL if config is empty or only once per given NODEB_CONF_READ_INTERVAL_h
+            if(NODEBs_CONF=='' or ((time.time() - NODEB_CONF_READ_TIMESTAMP) > (60*60*NODEB_CONF_READ_INTERVAL_h))):
+                NODEB_CONF_READ_TIMESTAMP = time.time()
+                MSSQL_CFG = CONF['transform']['mssql']
+                mssql_conn = pymssql.connect(host=MSSQL_CFG['url'], user=MSSQL_CFG['username'], password=MSSQL_CFG['password'], database=MSSQL_CFG['database'], as_dict=True, charset='utf8')
+                sql = """SELECT IP_ADDRESS,ADDRESS, SITE4G_NAME, ZONE, GEOHASH AS geohash FROM objects"""
+                config_data = psql.read_sql(sql, mssql_conn, index_col='IP_ADDRESS')
+                NODEBs_CONF = config_data.T.to_dict()
+                mssql_conn.close()
 
-            MSSQL_CFG = CONF['transform']['mssql']
-            mssql_conn = pymssql.connect(host=MSSQL_CFG['url'], user=MSSQL_CFG['username'], password=MSSQL_CFG['password'], database=MSSQL_CFG['database'], as_dict=True, charset='utf8')
-            sql = """SELECT IP_ADDRESS,ADDRESS, SITE4G_NAME, ZONE, GEOHASH AS geohash FROM objects"""
-            config_data = psql.read_sql(sql, mssql_conn, index_col='IP_ADDRESS')
-            config_data_dict = config_data.T.to_dict()
+
             for object_x in body:
                 try:
                     # print 'try to add tags..'
-                    object_x['tags'].update(config_data_dict[object_x['tags']['host']])
+                    object_x['tags'].update(NODEBs_CONF[object_x['tags']['host']])
                 except:
                     # print '....except'
                     object_x['tags'].update({'ADDRESS': 'Null','SITE4G_NAME': 'Null', 'ZONE': 0,'geohash': 'Null'})
@@ -46,7 +59,7 @@ def transform_func(body):
 def send_to_rabbit(body):
 
     global CONF
-    print ('Rabbit output conn params', CONF['output']['rabbitmq'])
+    #print ('Rabbit output conn params', CONF['output']['rabbitmq'])
     connectionParams = []
     for rabbit in CONF['output']['rabbitmq']:
         credentials = pika.PlainCredentials(rabbit['username'], rabbit['password'])
@@ -61,7 +74,7 @@ def send_to_rabbit(body):
     connection = connect_to_rabbit_node(connectionParams)
     channel = connection.channel()
     channel.basic_publish(exchange='',routing_key=CONF['output']['rabbitmq'][0]['queue_name'],body=body,properties=pika.BasicProperties(delivery_mode = 2))
-    print (" [x] Sent to Rabbit %r" % body)
+    #print (" [x] Sent to Rabbit %r" % body)
     connection.close()
 
 def send_to_influx(body):
@@ -74,13 +87,13 @@ def send_to_influx(body):
 
     body = json.loads(body)
 
-    print("Write points to InfluxDB: {0}".format(body))
+    #print("Write points to InfluxDB: {0}".format(body))
     res = client.write_points(body, time_precision='s')
 
 
 # metoda nasluchuje na odbir danych po otrzymaniu wysyla do bazy MongoDB
 def callback(ch, method, properties, body):
-    print(" [x] Received %r" % body)
+    #print(" [x] Received %r" % body)
 
     body = transform_func(body)
 
