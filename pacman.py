@@ -97,9 +97,9 @@ def send_to_influx(body):
 
         res = INFLUXDB_CONN.write_points(body, time_precision='s')
 
-    except influxdb_exceptions.InfluxDBClientError as e:
+    except: # influxdb_exceptions.InfluxDBClientError as e:
         print("Error writing points to InfluxDB: {0}".format(body))
-        print("InfluxDB connection error 0{}".format(e.message))
+        print("InfluxDB connection error")
         print ("Establishing new Infludb conn with params", CONF['output']['influxdb'])
         INFLUX_CFG = CONF['output']['influxdb']
         INFLUXDB_CONN = InfluxDBClient(INFLUX_CFG['url'], INFLUX_CFG['port'], INFLUX_CFG['username'], INFLUX_CFG['password'], INFLUX_CFG['database'])
@@ -108,10 +108,10 @@ def send_to_influx(body):
         print ("Writing points succedded: {0}".format(body))
         pass
 
-    except:
-        print("Error writing points to InfluxDB: {0}".format(body))
-        raise
-
+#    except:
+#        print("Error writing points to InfluxDB: {0}".format(body))
+#        INFLUXDB_CONN = ''
+#        pass
 
 
 # metoda nasluchuje na odbir danych po otrzymaniu wysyla do bazy MongoDB
