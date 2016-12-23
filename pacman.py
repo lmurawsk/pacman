@@ -3,6 +3,7 @@ import os
 import pika
 from pika import exceptions
 from influxdb import InfluxDBClient
+from influxdb import exceptions as influxdb_exceptions
 import time
 import toml
 import json
@@ -16,6 +17,9 @@ CONF_FILE = '/conf/conf.toml'
 NODEBs_CONF = ''
 NODEB_CONF_READ_INTERVAL_h = 24
 NODEB_CONF_READ_TIMESTAMP = 0
+
+## InfluxDB Connection
+INFLUXDB_CONN = ''
 
 def read_conf(CONF_FILE):
     with open(CONF_FILE) as conffile:
@@ -80,15 +84,34 @@ def send_to_rabbit(body):
 def send_to_influx(body):
 
     global CONF
-    print ('Infludb output conn params', CONF['output']['influxdb'])
-    INFLUX_CFG = CONF['output']['influxdb']
-    client = InfluxDBClient(INFLUX_CFG['url'], INFLUX_CFG['port'], INFLUX_CFG['username'], INFLUX_CFG['password'], INFLUX_CFG['database'])
-    #client.create_database('ping')
+    global INFLUXDB_CONN
 
     body = json.loads(body)
 
-    #print("Write points to InfluxDB: {0}".format(body))
-    res = client.write_points(body, time_precision='s')
+    try:
+
+        if(INFLUXDB_CONN == ''):
+            print ('Infludb new conn with params', CONF['output']['influxdb'])
+            INFLUX_CFG = CONF['output']['influxdb']
+            INFLUXDB_CONN = InfluxDBClient(INFLUX_CFG['url'], INFLUX_CFG['port'], INFLUX_CFG['username'], INFLUX_CFG['password'], INFLUX_CFG['database'])
+
+        res = INFLUXDB_CONN.write_points(body, time_precision='s')
+
+    except influxdb_exceptions.InfluxDBClientError as e:
+        print("Error writing points to InfluxDB: {0}".format(body))
+        print("InfluxDB connection error 0{}".format(e.message))
+        print ("Establishing new Infludb conn with params", CONF['output']['influxdb'])
+        INFLUX_CFG = CONF['output']['influxdb']
+        INFLUXDB_CONN = InfluxDBClient(INFLUX_CFG['url'], INFLUX_CFG['port'], INFLUX_CFG['username'], INFLUX_CFG['password'], INFLUX_CFG['database'])
+        print ("Success!")
+        res = INFLUXDB_CONN.write_points(body, time_precision='s')
+        print ("Writing points succedded: {0}".format(body))
+        pass
+
+    except:
+        print("Error writing points to InfluxDB: {0}".format(body))
+        raise
+
 
 
 # metoda nasluchuje na odbir danych po otrzymaniu wysyla do bazy MongoDB
