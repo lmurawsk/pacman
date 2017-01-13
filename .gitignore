@@ -1,0 +1,4 @@
+conf/pacman.toml
+!conf/
+ssl/*.pem
+!ssl/README.md

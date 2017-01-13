@@ -1,3 +1,5 @@
 toml
 pika
 influxdb
+pymssql
+pandas
