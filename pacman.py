@@ -3,7 +3,6 @@ import os
 import pika
 from pika import exceptions
 from influxdb import InfluxDBClient
-from influxdb import exceptions as influxdb_exceptions
 import time
 import toml
 import json
@@ -17,9 +16,6 @@ CONF_FILE = '/conf/conf.toml'
 NODEBs_CONF = ''
 NODEB_CONF_READ_INTERVAL_h = 24
 NODEB_CONF_READ_TIMESTAMP = 0
-
-## InfluxDB Connection
-INFLUXDB_CONN = ''
 
 def read_conf(CONF_FILE):
     with open(CONF_FILE) as conffile:
@@ -64,54 +60,39 @@ def send_to_rabbit(body):
 
     global CONF
     #print ('Rabbit output conn params', CONF['output']['rabbitmq'])
+    sslOptions = CONF['output']['rabbitmq']['ssl_options']
+
     connectionParams = []
-    for rabbit in CONF['output']['rabbitmq']:
-        credentials = pika.PlainCredentials(rabbit['username'], rabbit['password'])
+
+    rmqaccess = CONF['output']['rabbitmq']
+    credentials = pika.PlainCredentials(rmqaccess['username'], rmqaccess['password'])
+    for rabbit in CONF['output']['rabbitmq']['host']:
         connection_x = pika.ConnectionParameters(rabbit['url']
-                                         ,rabbit['port']
-                                         ,rabbit['vhost']
-                                         ,credentials)
+					,rabbit['port']
+					,rmqaccess['vhost']
+					,credentials
+					,ssl = rmqaccess['ssl']
+					,ssl_options = sslOptions)
         connectionParams.append(connection_x)
-
-
 
     connection = connect_to_rabbit_node(connectionParams)
     channel = connection.channel()
-    channel.basic_publish(exchange='',routing_key=CONF['output']['rabbitmq'][0]['queue_name'],body=body,properties=pika.BasicProperties(delivery_mode = 2))
+    channel.basic_publish(exchange='',routing_key=rmqaccess['queue_name'],body=body,properties=pika.BasicProperties(delivery_mode = 2))
     #print (" [x] Sent to Rabbit %r" % body)
     connection.close()
 
 def send_to_influx(body):
 
     global CONF
-    global INFLUXDB_CONN
+    print ('Infludb output conn params', CONF['output']['influxdb'])
+    INFLUX_CFG = CONF['output']['influxdb']
+    client = InfluxDBClient(INFLUX_CFG['url'], INFLUX_CFG['port'], INFLUX_CFG['username'], INFLUX_CFG['password'], INFLUX_CFG['database'])
+    #client.create_database('ping')
 
     body = json.loads(body)
 
-    try:
-
-        if(INFLUXDB_CONN == ''):
-            print ('Infludb new conn with params', CONF['output']['influxdb'])
-            INFLUX_CFG = CONF['output']['influxdb']
-            INFLUXDB_CONN = InfluxDBClient(INFLUX_CFG['url'], INFLUX_CFG['port'], INFLUX_CFG['username'], INFLUX_CFG['password'], INFLUX_CFG['database'])
-
-        res = INFLUXDB_CONN.write_points(body, time_precision='s')
-
-    except: # influxdb_exceptions.InfluxDBClientError as e:
-        print("Error writing points to InfluxDB: {0}".format(body))
-        print("InfluxDB connection error")
-        print ("Establishing new Infludb conn with params", CONF['output']['influxdb'])
-        INFLUX_CFG = CONF['output']['influxdb']
-        INFLUXDB_CONN = InfluxDBClient(INFLUX_CFG['url'], INFLUX_CFG['port'], INFLUX_CFG['username'], INFLUX_CFG['password'], INFLUX_CFG['database'])
-        print ("Success!")
-        res = INFLUXDB_CONN.write_points(body, time_precision='s')
-        print ("Writing points succedded: {0}".format(body))
-        pass
-
-#    except:
-#        print("Error writing points to InfluxDB: {0}".format(body))
-#        INFLUXDB_CONN = ''
-#        pass
+    #print("Write points to InfluxDB: {0}".format(body))
+    res = client.write_points(body, time_precision='s')
 
 
 # metoda nasluchuje na odbir danych po otrzymaniu wysyla do bazy MongoDB
@@ -154,13 +135,18 @@ def mRabbitMQConnector():
 
     global CONF
     print ('Rabbit Input conn params', CONF['input']['rabbitmq'])
+    sslOptions = CONF['input']['rabbitmq']['ssl_options']
     connectionParams = []
-    for rabbit in CONF['input']['rabbitmq']:
-        credentials = pika.PlainCredentials(rabbit['username'], rabbit['password'])
+    rmqaccess = CONF['input']['rabbitmq']
+    credentials = pika.PlainCredentials(rmqaccess['username'], rmqaccess['password'])
+
+    for rabbit in CONF['input']['rabbitmq']['host']:
         connection_x = pika.ConnectionParameters(rabbit['url']
-                                         ,rabbit['port']
-                                         ,rabbit['vhost']
-                                         ,credentials)
+					,rabbit['port']
+					,rmqaccess['vhost']
+					,credentials
+					,ssl = rmqaccess['ssl']
+					,ssl_options = sslOptions)
         connectionParams.append(connection_x)
 
     connection = connect_to_rabbit_node(connectionParams)
@@ -174,7 +160,7 @@ def mRabbitMQConnector():
 
     channel.basic_qos(prefetch_count=1)
     channel.basic_consume(callback,
-                          queue=CONF['input']['rabbitmq'][0]['queue_name'])
+                          queue=rmqaccess['queue_name'])
 
     channel.start_consuming()
     print(' [*] BYE')
@@ -184,4 +170,3 @@ if __name__ == '__main__':
     CONF = read_conf(CONF_FILE)
     mRabbitMQConnector()
     print "GO"
-		
