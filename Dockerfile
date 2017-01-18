@@ -33,6 +33,7 @@ RUN mkdir -p $CONF_DIR &&\
 ENV APP_DIR /app
 RUN mkdir -p $APP_DIR
 COPY pacman.py $APP_DIR
+COPY ZabbixReader.py $APP_DIR
 
 ADD ssl /ssl
 ADD conf /conf
@@ -42,4 +43,3 @@ WORKDIR $APP_DIR
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-CMD ["python","pacman.py","&"]

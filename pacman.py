@@ -9,8 +9,10 @@ import json
 from datetime import datetime
 import pymssql
 import pandas.io.sql as psql
+from ZabbixReader import ZabbixReader
 
-CONF_FILE = '/conf/conf.toml'
+
+CONF_FILE = './conf/conf.toml'
 
 ## MS_SQL QUERY CONFIG
 NODEBs_CONF = ''
@@ -59,7 +61,7 @@ def transform_func(body):
 def send_to_rabbit(body):
 
     global CONF
-    #print ('Rabbit output conn params', CONF['output']['rabbitmq'])
+    print ('Rabbit output conn params', CONF['output']['rabbitmq'])
     sslOptions = CONF['output']['rabbitmq']['ssl_options']
 
     connectionParams = []
@@ -78,8 +80,9 @@ def send_to_rabbit(body):
     connection = connect_to_rabbit_node(connectionParams)
     channel = connection.channel()
     channel.basic_publish(exchange='',routing_key=rmqaccess['queue_name'],body=body,properties=pika.BasicProperties(delivery_mode = 2))
-    #print (" [x] Sent to Rabbit %r" % body)
+    print (" [x] Sent to Rabbit %r" % body)
     connection.close()
+
 
 def send_to_influx(body):
 
@@ -109,6 +112,7 @@ def callback(ch, method, properties, body):
         send_to_rabbit(body)
 
     ch.basic_ack(delivery_tag = method.delivery_tag)
+
 
 def connect_to_rabbit_node(connectionParams):
     # polacz sie z pierwszym dostepnym nodem rabbitowym z listy
@@ -165,8 +169,62 @@ def mRabbitMQConnector():
     channel.start_consuming()
     print(' [*] BYE')
 
+
+def getZabbixData():
+    """ Get data from Zabbix based on configuration, send to RMq """
+    # zabbix connection 
+    global CONF
+    ZAB_CONF = CONF['input']['zabbix']
+    zab_url = ZAB_CONF['url']
+    zab_user = ZAB_CONF['user']
+    zab_password = ZAB_CONF['password']
+    zr = ZabbixReader(zab_url, zab_user, zab_password)
+    
+    # iterate through groups defined in conf and send  data to RMq
+    try:
+    	for group in CONF['input']['zabbix']['group']:
+    	    stats = zr.get_stats_from_gname_json(group['gname'])
+	    send_to_rabbit(stats)
+    except Exception as e:
+	print e
+	pass
+
+    # iterate through hosts defined in conf and send data to RMq
+    try:
+    	for host in CONF['input']['zabbix']['host']:
+            stats = zr.get_stats_from_hname_json(host['hname'])
+            send_to_rabbit(stats)
+    except Exception as e:
+	print e
+	pass
+
+def mZabbixConnector():
+    global CONF
+    CONF = read_conf(CONF_FILE)
+    sleep_time = CONF['input']['zabbix']['repeat_time']
+    while True:
+        getZabbixData()
+        print "Sleep for %d seconds ..zzz..zzz..zzz..." % sleep_time
+        time.sleep(sleep_time)
+
+
 if __name__ == '__main__':
     global CONF
     CONF = read_conf(CONF_FILE)
-    mRabbitMQConnector()
-    print "GO"
+    # check for zabbix input configuration
+    try:
+	CONF['input']['zabbix']
+    except KeyError as e:
+	print "No valid input for zabbix in file: [%s] " % CONF_FILE
+    else:
+	print "pacman in Zabbix mode"
+        mZabbixConnector()
+    # check for rabbit input configuration
+    try:
+	CONF['input']['rabbitmq']
+    except KeyError as e:
+        print "No valid input for rabbit in file: [%s] " % CONF_FILE
+    else:
+	print "pacman in Rabbit mode" 
+	mRabbitMQConnector()
+    
