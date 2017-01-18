@@ -3,3 +3,4 @@ pika
 influxdb
 pymssql
 pandas
+py-zabbix

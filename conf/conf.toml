@@ -3,24 +3,43 @@
 title = "TOML Example"
 
 [client]
-    name = "client name"
+    name = "client_name"
 
-## rabbit HA-mode queue config
-[[input.rabbitmq]]
-    url = "xxx.xxx.xxx.xxx"
-    port = 69
-    vhost = "vhost"
+## zabbix input config
+[input.zabbix]
+    url = "url"
+    user = "user"
+    password = "password"
+    repeat_time = time[s]
+
+	[[input.zabbix.group]]
+    	gname = "group name"
+
+	[[input.zabbix.host]]
+    	hname = "host name"
+
+	[[input.zabbix.host]]
+    	hname = "host name"
+
+## rabbit HA-mode input  queue config
+[input.rabbitmq]
+    vhost = "host"
     queue_name = "queue_name"
     username = "username"
     password  = "password"
+    ssl = true/false
+    [input.rabbitmq.ssl_options]
+	"ca_certs" = "/ssl/cacert.pem"
+	"certfile" = "/ssl/cert.pem"
+	"keyfile" =  "/ssl/key.pem"
 
-[[input.rabbitmq]]
-    url = "yyy.yyy.yyy.yyy"
-    port = 69
-    vhost = "vhost"
-    queue_name = "queue_name"
-    username = "username"
-    password  = "password"
+    [[input.rabbitmq.host]]
+        url = "url/ip"
+        port = 69
+
+    [[input.rabbitmq.host]]
+        url = "url/ip"
+        port = 68
 
 [transform.mssql]
     url = "zzz.zzz.zzz.zzz"
@@ -28,15 +47,28 @@ title = "TOML Example"
     username = "username"
     password = "password"
 
-#[[output.rabbitmq]]
-#    url = "yyy.yyy.yyy.yyy"
-#    port = 69
-#    vhost = "/"
-#    queue_name = "queue_name"
-#    username = "username"
-#    password  = "password"
+## rabbit HA-mode output queue config
+[output.rabbitmq]
+    vhost = "host"
+    queue_name = "queue_name"
+    username = "username"
+    password  = "password"
+    ssl = true/false
 
+    [output.rabbitmq.ssl_options]
+	"ca_certs" = "/ssl/cacert.pem"
+	"certfile" = "/ssl/cert.pem"
+	"keyfile" =  "/ssl/key.pem"
 
+    [[output.rabbitmq.host]]
+        url = "url/ip"
+        port = 69
+
+    [[output.rabbitmq.host]]
+        url = "url/ip"
+        port = 68
+
+## influx output config
 [output.influxdb]
   url = "influx.db"
   port = "69"
@@ -65,4 +97,3 @@ title = "TOML Example"
   # ssl_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
-
