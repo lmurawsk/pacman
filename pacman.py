@@ -12,7 +12,7 @@ import pandas.io.sql as psql
 from ZabbixReader import ZabbixReader
 
 
-CONF_FILE = './conf/conf.toml'
+CONF_FILE = '/conf/conf.toml'
 
 ## MS_SQL QUERY CONFIG
 NODEBs_CONF = ''

@@ -43,3 +43,4 @@ WORKDIR $APP_DIR
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
+CMD ["python","pacman.py"]
