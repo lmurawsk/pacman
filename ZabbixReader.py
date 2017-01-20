@@ -43,7 +43,7 @@ class ZabbixReader():
                                 "device": _hname,
                                 "itemid": value['itemid']
                                 },
-                            "timestamp": int(value['clock']),
+                            "time": int(value['clock']),
                             "fields": {
                                 metric_name: float(value['value'])
                                 }
@@ -72,7 +72,7 @@ class ZabbixReader():
                                 "device": device,
                                 "itemid": value['itemid']
                                 },
-                            "timestamp": int(value['clock']),
+                            "time": int(value['clock']),
                             "fields": {
                                 metric_name: float(value['value'])
                                 }
