@@ -62,7 +62,11 @@ def send_to_rabbit(body):
 
     global CONF
     print ('Rabbit output conn params', CONF['output']['rabbitmq'])
-    sslOptions = CONF['output']['rabbitmq']['ssl_options']
+
+    if 'ssl_options' in CONF['input']['rabbitmq'].viewkeys():
+        sslOptions = CONF['input']['rabbitmq']['ssl_options']
+    else:
+        sslOptions = ''
 
     connectionParams = []
 
@@ -139,7 +143,12 @@ def mRabbitMQConnector():
 
     global CONF
     print ('Rabbit Input conn params', CONF['input']['rabbitmq'])
-    sslOptions = CONF['input']['rabbitmq']['ssl_options']
+    
+    if 'ssl_options' in CONF['input']['rabbitmq'].viewkeys():
+        sslOptions = CONF['input']['rabbitmq']['ssl_options']
+    else:
+        sslOptions = ''
+
     connectionParams = []
     rmqaccess = CONF['input']['rabbitmq']
     credentials = pika.PlainCredentials(rmqaccess['username'], rmqaccess['password'])
