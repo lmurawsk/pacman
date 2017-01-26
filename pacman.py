@@ -98,6 +98,11 @@ def send_to_influx(body):
 
     body = json.loads(body)
 
+    if not isinstance(body,list):
+        tmp_list = []
+        tmp_list.append(body)
+        body = tmp_list
+
     #print("Write points to InfluxDB: {0}".format(body))
     res = client.write_points(body, time_precision='s')
 
