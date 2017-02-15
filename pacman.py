@@ -104,7 +104,7 @@ def send_to_influx(body):
         body = tmp_list
 
     #print("Write points to InfluxDB: {0}".format(body))
-    res = client.write_points(body, time_precision='s')
+    res = client.write_points(body, time_precision=INFLUX_CFG['precision'])
 
 
 # metoda nasluchuje na odbir danych po otrzymaniu wysyla do bazy MongoDB
