@@ -94,7 +94,7 @@ def send_to_influx(body):
     print ('Infludb output conn params', CONF['output']['influxdb'])
     INFLUX_CFG = CONF['output']['influxdb']
     client = InfluxDBClient(INFLUX_CFG['url'], INFLUX_CFG['port'], INFLUX_CFG['username'], INFLUX_CFG['password'], INFLUX_CFG['database'])
-    client.create_database(INFLUX_CFG['database'])
+    #client.create_database(INFLUX_CFG['database'])
 
     body = json.loads(body)
 
