@@ -3,12 +3,16 @@
 """ ZabbixReader.py: Delivery class that read data from zabbix monitoring system. """
 
 __author__      = "Karol Kaczan"
-__version__		= "v0.2"
+__version__		= "v0.3"
 
 # #########################
 # Store version change here
 # #########################
 # 10/03/2017 - Parse item name to TAGS[metric_name, interface, location]
+# 07/04/2017 - Add parsing all metrics from IP SLA tests, change to group name base regex
+# 20/04/2017 - Added user friendly name in TOS key tag
+# 27/04/2017 - Added additional pattern to IP SLA test
+# 27/04/2017 - Parse variable to name bug fixing
 #
 #
 
@@ -33,23 +37,46 @@ class ZabbixReader():
             raise Exception(e)
 
         self.metric_names_regex = [
-				'^(ICMP loss).*'
-				,'^(ICMP ping).*'
-				,'^(ICMP response time).*'
-				,'^(Incoming traffic) on interface (\S+) \(CORP-(\S+)[-_]{1}LINKID.*'
-				,'^(Outgoing traffic) on interface (\S+) \(CORP-(\S+)[-_]{1}LINKID.*'
-				,'^(In utilization) on (\S+) \(CORP-(\S+)[-_]{1}LINKID.*'
-				,'^(Out utilization) on (\S+) \(CORP-(\S+)[-_]{1}LINKID.*'
-				,'^(Inbound errors) on interface (\S+) \(CORP-(\S+)[-_]{1}LINKID.*'
-				,'^(Outbound errors) on interface (\S+) \(CORP-(\S+)[-_]{1}LINKID.*'
-				,'^(Percentage inbound errors) on interface (\S+) \(CORP-(\S+)[-_]{1}LINKID.*'
-				,'^(Percentage outbound errors) on interface (\S+) \(CORP-(\S+)[-_]{1}LINKID.*'
-				,'^(Incoming unicast packets) on interface (\S+) \(CORP-(\S+)[-_]{1}LINKID.*'
-				,'^(Outcoming unicast packets) on interface (\S+) \(CORP-(\S+)[-_]{1}LINKID.*'
-				,'^(Admin status) of interface (\S+) \(CORP-(\S+)[-_]{1}LINKID.*'
-                ,'^(Jitter) for CORP-.* (?:IBM-0-|1-0-).*'
-                ,'^(Packet Delay) for CORP-.* (?:IBM-0-|1-0-).*'
-                ,'^(Packet loss) for CORP.* (?:IBM-0-|1-0-).*'
+				'^(?P<metric_name>ICMP loss).*'
+				,'^(?P<metric_name>ICMP ping).*'
+				,'^(?P<metric_name>ICMP response time).*'
+				,'^(?P<metric_name>Incoming traffic) on interface (?P<interface>\S+) \(CORP-(?P<location>\S+)[-_]{1}LINKID.*'
+				,'^(?P<metric_name>Outgoing traffic) on interface (?P<interface>\S+) \(CORP-(?P<location>\S+)[-_]{1}LINKID.*'
+				,'^(?P<metric_name>In utilization) on (?P<interface>\S+) \(CORP-(?P<location>\S+)[-_]{1}LINKID.*'
+				,'^(?P<metric_name>Out utilization) on (?P<interface>\S+) \(CORP-(?P<location>\S+)[-_]{1}LINKID.*'
+				,'^(?P<metric_name>Inbound errors) on interface (?P<interface>\S+) \(CORP-(?P<location>\S+)[-_]{1}LINKID.*'
+				,'^(?P<metric_name>Outbound errors) on interface (?P<interface>\S+) \(CORP-(?P<location>\S+)[-_]{1}LINKID.*'
+				,'^(?P<metric_name>Percentage inbound errors) on interface (?P<interface>\S+) \(CORP-(?P<location>\S+)[-_]{1}LINKID.*'
+				,'^(?P<metric_name>Percentage outbound errors) on interface (?P<interface>\S+) \(CORP-(?P<location>\S+)[-_]{1}LINKID.*'
+				,'^(?P<metric_name>Incoming unicast packets) on interface (?P<interface>\S+) \(CORP-(?P<location>\S+)[-_]{1}LINKID.*'
+				,'^(?P<metric_name>Outcoming unicast packets) on interface (?P<interface>\S+) \(CORP-(?P<location>\S+)[-_]{1}LINKID.*'
+				,'^(?P<metric_name>Admin status) of interface (?P<interface>\S+) \(CORP-(?P<location>\S+)[-_]{1}LINKID.*'
+				### ip sla pattern 1
+                ,'^(?P<metric_name>Jitter) for CORP-.* (?:IBM-(?P<tos1>0)-|1-(?P<tos>0)-).*'
+                ,'^(?P<metric_name>Packet Delay) for CORP-.* (?:IBM-(?P<tos1>0)-|1-(?P<tos>0)-).*'
+                ,'^(?P<metric_name>Packet loss) for CORP.* (?:IBM-(?P<tos1>0)-|1-(?P<tos>0)-).*'
+				,'^(?P<metric_name>Jitter) for CORP-.* (?:IBM-(?P<tos1>96)-|1-(?P<tos>96)-).*'
+                ,'^(?P<metric_name>Packet Delay) for CORP-.* (?:IBM-(?P<tos1>96)-|1-(?P<tos>96)-).*'
+                ,'^(?P<metric_name>Packet loss) for CORP.* (?:IBM-(?P<tos1>96)-|1-(?P<tos>96)-).*'
+				,'^(?P<metric_name>Jitter) for CORP-.* (?:IBM-(?P<tos1>128)-|1-(?P<tos>128)-).*'
+                ,'^(?P<metric_name>Packet Delay) for CORP-.* (?:IBM-(?P<tos1>128)-|1-(?P<tos>128)-).*'
+                ,'^(?P<metric_name>Packet loss) for CORP.* (?:IBM-(?P<tos1>128)-|1-(?P<tos>128)-).*'
+				,'^(?P<metric_name>Jitter) for CORP-.* (?:IBM-(?P<tos1>184)-|1-(?P<tos>184)-).*'
+                ,'^(?P<metric_name>Packet Delay) for CORP-.* (?:IBM-(?P<tos1>184)-|1-(?P<tos>184)-).*'
+                ,'^(?P<metric_name>Packet loss) for CORP.* (?:IBM-(?P<tos1>184)-|1-(?P<tos>184)-).*'
+				### ip sla pattern 2
+				,'^(?P<metric_name>Jitter) for CORP-.*(?:IBM-(?P<tos1>0)-|-(?P<tos>0)-).*'
+                ,'^(?P<metric_name>Packet Delay) for CORP-.*(?:IBM-(?P<tos1>0)-|-(?P<tos>0)-).*'
+                ,'^(?P<metric_name>Packet loss) for CORP.*(?:IBM-(?P<tos1>0)-|-(?P<tos>0)-).*'
+				,'^(?P<metric_name>Jitter) for CORP-.*(?:IBM-(?P<tos1>96)-|-(?P<tos>96)-).*'
+                ,'^(?P<metric_name>Packet Delay) for CORP-.*(?:IBM-(?P<tos1>96)-|-(?P<tos>96)-).*'
+                ,'^(?P<metric_name>Packet loss) for CORP.*(?:IBM-(?P<tos1>96)-|-(?P<tos>96)-).*'
+				,'^(?P<metric_name>Jitter) for CORP-.*(?:IBM-(?P<tos1>128)-|-(?P<tos>128)-).*'
+                ,'^(?P<metric_name>Packet Delay) for CORP-.*(?:IBM-(?P<tos1>128)-|-(?P<tos>128)-).*'
+                ,'^(?P<metric_name>Packet loss) for CORP.*(?:IBM-(?P<tos1>128)-|-(?P<tos>128)-).*'
+				,'^(?P<metric_name>Jitter) for CORP-.*(?:IBM-(?P<tos1>184)-|-(?P<tos>184)-).*'
+                ,'^(?P<metric_name>Packet Delay) for CORP-.*(?:IBM-(?P<tos1>184)-|-(?P<tos>184)-).*'
+                ,'^(?P<metric_name>Packet loss) for CORP.*(?:IBM-(?P<tos1>184)-|-(?P<tos>184)-).*'
 			]
 
 
@@ -67,6 +94,7 @@ class ZabbixReader():
             metric_name = tags['metric_name']
 	    interface = tags['interface']
 	    location = tags['location']
+	    tos = tags['tos']
 	    if len(location) == 0:
                 location = self.getLocationFromHostName(_hname)
 	    for history in self.get_stats_for_iid(item['itemid'], item['value_type']):
@@ -83,8 +111,9 @@ class ZabbixReader():
                                     "device": _hname,
 				    "interface": interface,
 				    "location": location,
-                                    "itemid": history['itemid']
-                                        },
+				"tos": tos,
+                                "itemid": history['itemid']
+                                },
                                 "time": int(history['clock']),
                                 "fields": {
                                     metric_name: value
@@ -114,6 +143,7 @@ class ZabbixReader():
 		metric_name = tags['metric_name']
 		interface = tags['interface']
 		location = tags['location']
+		tos = tags['tos']
 		if len(location) == 0:
                     location = self.getLocationFromHostName(device)
 		for history in self.get_stats_for_iid(item['itemid'], item['value_type']):
@@ -131,6 +161,7 @@ class ZabbixReader():
                                     "device": device,
 				    "interface": interface,
 				    "location": location,
+				    "tos": tos,
                                     "itemid": history['itemid']
                                         },
                                 "time": int(history['clock']),
@@ -168,7 +199,7 @@ class ZabbixReader():
         return result_items['result']
 
 		
-    def get_stats_for_iid(self, _iid, _value_type, _limit=10):
+    def get_stats_for_iid(self, _iid, _value_type, _limit=5):
         """ Gets history data for specific item defined by id"""
         result_hist_item= self.zapi.do_request('history.get',
             {
@@ -265,7 +296,8 @@ class ZabbixReader():
 	
 	    # looking for variable in item name (ex. $1, $2...)
 	    var_match = re.search('.*\$([1-9]){1}.*',_iname)
-	
+	    print 'var_match: ', var_match
+		
 	    # if variable not exist do nothing with name
 	    if var_match is None:
 	    	return _iname
@@ -295,34 +327,42 @@ class ZabbixReader():
 		
     def parseNameToTags(self, _ikey, _iname):
 		
-		tag_dic = {'metric_name':'', 'interface':'', 'location':''}
+		tag_dic = {'metric_name':'', 'interface':'', 'location':'', 'tos':''}
 		metric_name = self.parseVariableInItemName(_ikey, _iname)
-		# print 'metric name: ', metric_name
+		print 'key: ', _ikey, 'name: ', _iname
+		print 'metric name: ', metric_name
 		for metric_regex in self.metric_names_regex:
 		        match = re.search(metric_regex,metric_name)
 
 			if match is not None:
 				print 'Metric name in regex: ', metric_regex
 				try:
-					print 'group 1: %s' % match.group(1) # metric_name
-					tag_dic['metric_name'] = match.group(1)
+					print 'group metric_name: %s' % match.group('metric_name') # metric_name
+					tag_dic['metric_name'] = match.group('metric_name')
 				except IndexError as ie:
 					print 'Error in metric name: group number invalid'
 					print ie
 				try:
-					print 'group 2: %s' % match.group(2) # interface
-					print 'group 3: %s' % match.group(3) # location
-					tag_dic['interface'] = match.group(2)
-					tag_dic['location'] = match.group(3)
+					print 'group interface: %s' % match.group('interface') # interface
+					print 'group location: %s' % match.group('location') # location
+					tag_dic['interface'] = match.group('interface')
+					tag_dic['location'] = match.group('location')
 				except IndexError as ie:
 					print 'No interface or location: group number invalid'
 					print ie
+				try:
+					if match.group('tos') is not None:
+						tag_dic['tos'] = self.mapTOSToName(match.group('tos'))
+					if match.group('tos1') is not None:
+						tag_dic['tos'] = self.mapTOSToName(match.group('tos1'))
+					print 'group [tos]: %s' % tag_dic['tos']
+				except:
+					pass
 				break
                 if match is None:
 		        print 'METRIC: %s do not match any pattern' % metric_name
                         return None
 		
-		#print tag_dic
 		return tag_dic
 
     def getLocationFromHostName(self, _hname):
@@ -338,7 +378,7 @@ class ZabbixReader():
                 match = re.search(metric_regex, metric_name)
                 if match is not None:
                     try:
-                        location = match.group(3)
+                        location = match.group('location')
                     except IndexError as ie:
                         pass
                     else:
@@ -347,6 +387,17 @@ class ZabbixReader():
 			print 'TAG::location not set for %s' % _hname
             return location
 
+    def mapTOSToName(self, _tos):
+        """ Maps TOS to user friendly name """
+	qos_name_dic = {
+            '184':'RT-Voice',
+            '128':'BC2',
+            '96':'BC1',
+            '0':'BE'
+        }
+        print 'Passed qos name: ', qos_name_dic.get(_tos)
+        return qos_name_dic.get(_tos)
+			
     			
 ##############################################################################
 
