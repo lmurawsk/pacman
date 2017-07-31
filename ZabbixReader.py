@@ -3,7 +3,7 @@
 """ ZabbixReader.py: Delivery class that read data from zabbix monitoring system. """
 
 __author__      = "Karol Kaczan"
-__version__		= "v0.3"
+__version__		= "v0.4"
 
 # #########################
 # Store version change here
@@ -13,7 +13,7 @@ __version__		= "v0.3"
 # 20/04/2017 - Added user friendly name in TOS key tag
 # 27/04/2017 - Added additional pattern to IP SLA test
 # 27/04/2017 - Parse variable to name bug fixing
-#
+# 31/07/2017 - Get work with new TOS fields
 #
 
 from zabbix.api import ZabbixAPI
@@ -58,9 +58,15 @@ class ZabbixReader():
 				,'^(?P<metric_name>Jitter) for CORP-.* (?:IBM-(?P<tos1>96)-|1-(?P<tos>96)-).*'
                 ,'^(?P<metric_name>Packet Delay) for CORP-.* (?:IBM-(?P<tos1>96)-|1-(?P<tos>96)-).*'
                 ,'^(?P<metric_name>Packet loss) for CORP.* (?:IBM-(?P<tos1>96)-|1-(?P<tos>96)-).*'
+				,'^(?P<metric_name>Jitter) for CORP-.* (?:IBM-(?P<tos1>104)-|1-(?P<tos>104)-).*'
+                ,'^(?P<metric_name>Packet Delay) for CORP-.* (?:IBM-(?P<tos1>104)-|1-(?P<tos>104)-).*'
+                ,'^(?P<metric_name>Packet loss) for CORP.* (?:IBM-(?P<tos1>104)-|1-(?P<tos>104)-).*'                
 				,'^(?P<metric_name>Jitter) for CORP-.* (?:IBM-(?P<tos1>128)-|1-(?P<tos>128)-).*'
                 ,'^(?P<metric_name>Packet Delay) for CORP-.* (?:IBM-(?P<tos1>128)-|1-(?P<tos>128)-).*'
                 ,'^(?P<metric_name>Packet loss) for CORP.* (?:IBM-(?P<tos1>128)-|1-(?P<tos>128)-).*'
+                ,'^(?P<metric_name>Jitter) for CORP-.* (?:IBM-(?P<tos1>184)-|1-(?P<tos>136)-).*'
+                ,'^(?P<metric_name>Packet Delay) for CORP-.* (?:IBM-(?P<tos1>184)-|1-(?P<tos>136)-).*'
+                ,'^(?P<metric_name>Packet loss) for CORP.* (?:IBM-(?P<tos1>184)-|1-(?P<tos>136)-).*'
 				,'^(?P<metric_name>Jitter) for CORP-.* (?:IBM-(?P<tos1>184)-|1-(?P<tos>184)-).*'
                 ,'^(?P<metric_name>Packet Delay) for CORP-.* (?:IBM-(?P<tos1>184)-|1-(?P<tos>184)-).*'
                 ,'^(?P<metric_name>Packet loss) for CORP.* (?:IBM-(?P<tos1>184)-|1-(?P<tos>184)-).*'
@@ -71,10 +77,16 @@ class ZabbixReader():
 				,'^(?P<metric_name>Jitter) for CORP-.*(?:IBM-(?P<tos1>96)-|-(?P<tos>96)-).*'
                 ,'^(?P<metric_name>Packet Delay) for CORP-.*(?:IBM-(?P<tos1>96)-|-(?P<tos>96)-).*'
                 ,'^(?P<metric_name>Packet loss) for CORP.*(?:IBM-(?P<tos1>96)-|-(?P<tos>96)-).*'
-				,'^(?P<metric_name>Jitter) for CORP-.*(?:IBM-(?P<tos1>128)-|-(?P<tos>128)-).*'
+                ,'^(?P<metric_name>Jitter) for CORP-.*(?:IBM-(?P<tos1>104)-|-(?P<tos>104)-).*'
+                ,'^(?P<metric_name>Packet Delay) for CORP-.*(?:IBM-(?P<tos1>104)-|-(?P<tos>104)-).*'
+                ,'^(?P<metric_name>Packet loss) for CORP.*(?:IBM-(?P<tos1>104)-|-(?P<tos>104)-).*'                
+                ,'^(?P<metric_name>Jitter) for CORP-.*(?:IBM-(?P<tos1>128)-|-(?P<tos>128)-).*'
                 ,'^(?P<metric_name>Packet Delay) for CORP-.*(?:IBM-(?P<tos1>128)-|-(?P<tos>128)-).*'
                 ,'^(?P<metric_name>Packet loss) for CORP.*(?:IBM-(?P<tos1>128)-|-(?P<tos>128)-).*'
-				,'^(?P<metric_name>Jitter) for CORP-.*(?:IBM-(?P<tos1>184)-|-(?P<tos>184)-).*'
+                ,'^(?P<metric_name>Jitter) for CORP-.*(?:IBM-(?P<tos1>136)-|-(?P<tos>136)-).*'
+                ,'^(?P<metric_name>Packet Delay) for CORP-.*(?:IBM-(?P<tos1>136)-|-(?P<tos>136)-).*'
+                ,'^(?P<metric_name>Packet loss) for CORP.*(?:IBM-(?P<tos1>136)-|-(?P<tos>136)-).*'
+                ,'^(?P<metric_name>Jitter) for CORP-.*(?:IBM-(?P<tos1>184)-|-(?P<tos>184)-).*'
                 ,'^(?P<metric_name>Packet Delay) for CORP-.*(?:IBM-(?P<tos1>184)-|-(?P<tos>184)-).*'
                 ,'^(?P<metric_name>Packet loss) for CORP.*(?:IBM-(?P<tos1>184)-|-(?P<tos>184)-).*'
 			]
@@ -391,7 +403,9 @@ class ZabbixReader():
         """ Maps TOS to user friendly name """
 	qos_name_dic = {
             '184':'RT-Voice',
+            '136':'BC2',
             '128':'BC2',
+            '104':'BC1',
             '96':'BC1',
             '0':'BE'
         }
