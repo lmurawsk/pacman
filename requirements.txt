@@ -4,3 +4,4 @@ influxdb
 pymssql
 pandas
 py-zabbix
+paho-mqtt

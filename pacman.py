@@ -2,6 +2,7 @@
 import os
 import pika
 from pika import exceptions
+import paho.mqtt.client as mqtt
 from influxdb import InfluxDBClient
 import time
 import toml
@@ -12,7 +13,7 @@ import pandas.io.sql as psql
 from ZabbixReader import ZabbixReader
 
 
-CONF_FILE = '/conf/conf.toml'
+CONF_FILE = '/pacman/conf/conf.toml'
 
 ## MS_SQL QUERY CONFIG
 NODEBs_CONF = ''
@@ -84,7 +85,7 @@ def send_to_rabbit(body):
     connection = connect_to_rabbit_node(connectionParams)
     channel = connection.channel()
     channel.basic_publish(exchange='',routing_key=rmqaccess['queue_name'],body=body,properties=pika.BasicProperties(delivery_mode = 2))
-    print (" [x] Sent to Rabbit %r" % body)
+    #print (" [x] Sent to Rabbit %r" % body)
     connection.close()
 
 
@@ -106,8 +107,25 @@ def send_to_influx(body):
     #print("Write points to InfluxDB: {0}".format(body))
     res = client.write_points(body, time_precision=INFLUX_CFG['precision'])
 
+def send_to_MQTTBroaker(body):
+    global CONF
+    print ('MQTT output conn params', CONF['output']['mqtt'])
+    client = mqtt.Client()
 
-# metoda nasluchuje na odbir danych po otrzymaniu wysyla do bazy MongoDB
+    host = CONF['output']['mqtt']['host']
+    port = CONF['output']['mqtt']['port']
+    user = CONF['output']['mqtt']['user']
+    passwd = CONF['output']['mqtt']['password']
+
+    client.username_pw_set(user, password=passwd)
+    client.connect(host, port, 60)
+    
+    topic = CONF['output']['mqtt']['topic']
+    payload = json.dumps(body)
+    client.publish(topic,payload)
+    client.disconnect()
+
+# metoda nasluchuje na odbir danych po otrzymaniu wysyla do bazy
 def callback(ch, method, properties, body):
     #print(" [x] Received %r" % body)
 
@@ -119,6 +137,9 @@ def callback(ch, method, properties, body):
     
     if 'rabbitmq' in CONF['output'].viewkeys():
         send_to_rabbit(body)
+
+    if 'mqtt' in CONF['output'].viewkeys():
+        send_to_MQTTBroaker(body)
 
     ch.basic_ack(delivery_tag = method.delivery_tag)
 
@@ -221,6 +242,43 @@ def mZabbixConnector():
         print "Sleep for %d seconds ..zzz..zzz..zzz..." % sleep_time
         time.sleep(sleep_time)
 
+###################### MQTT Connector ########################
+# The callback for when the client receives a CONNACK response from the server.
+def onMQTTconnect(client, userdata, flags, rc):
+    global CONF
+    CONF = read_conf(CONF_FILE)
+    topic = CONF['input']['mqtt']['topic']
+    print("Connected with result code "+str(rc))
+
+    # Subscribing in on_connect() means that if we lose the connection and
+    # reconnect then subscriptions will be renewed.
+    #client.subscribe("$SYS/#")
+    client.subscribe(topic)
+
+# The callback for when a PUBLISH message is received from the server.
+def onMQTTmessage(client, userdata, msg):
+    print(msg.topic+" "+str(msg.payload))
+    send_to_rabbit(msg.payload)
+
+def mMQTTConnector():
+    global CONF
+    CONF = read_conf(CONF_FILE)
+    client = mqtt.Client()
+    host = CONF['input']['mqtt']['host']
+    port = int(CONF['input']['mqtt']['port'])
+    user = CONF['input']['mqtt']['user']
+    passwd = CONF['input']['mqtt']['password']
+    print host,port,user,passwd
+
+    #client.tls_set("certs/ca-cert.pem")
+    #client.tls_insecure_set(True)
+    client.username_pw_set(user, password=passwd)
+    client.on_connect = onMQTTconnect
+    client.on_message = onMQTTmessage
+    print "GO"
+    client.connect(host, port, 60)
+    client.loop_forever()
+###################### MQTT Connector END ########################
 
 if __name__ == '__main__':
     global CONF
@@ -242,3 +300,11 @@ if __name__ == '__main__':
 	print "pacman in Rabbit mode" 
 	mRabbitMQConnector()
     
+    # check for MQTT input configuration
+    try:
+	CONF['input']['mqtt']
+    except KeyError as e:
+        print "No valid input for MQTT in file: [%s] " % CONF_FILE
+    else:
+	print "pacman in MQTT mode" 
+	mMQTTConnector()

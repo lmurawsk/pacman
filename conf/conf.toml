@@ -5,6 +5,14 @@ title = "TOML Example"
 [client]
     name = "client_name"
 
+## MQTT input config
+[input.mqtt]
+    host = "<host>"
+    port = <port>
+    user = "<user>"
+    password = "<password>"
+    topic = "<topic/name/#>"
+
 ## zabbix input config
 [input.zabbix]
     url = "url"
@@ -97,3 +105,11 @@ title = "TOML Example"
   # ssl_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+## MQTT output config
+[output.mqtt]
+    host = "<host>"
+    port = <port>
+    user = "<user>"
+    password = "<password>"
+    topic = "<topic/name/#>"
